@@ -22,6 +22,9 @@ from database import (
 
 app = FastAPI(title="Support Ticket Triage Tool")
 
+MAX_TICKETS_PER_BATCH = 100
+MAX_TEXT_LENGTH = 2000
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -40,15 +43,26 @@ class TicketIn(BaseModel):
 def on_startup():
     init_db()
 
-
 @app.post("/tickets")
 def create_tickets(tickets: list[TicketIn]):
+    if len(tickets) > MAX_TICKETS_PER_BATCH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Batch too large. Maximum {MAX_TICKETS_PER_BATCH} tickets per request."
+        )
+
+    skipped = []
     for ticket in tickets:
+        if len(ticket.text) > MAX_TEXT_LENGTH:
+            skipped.append({"text": ticket.text[:50] + "...", "reason": "text too long"})
+            continue
+
         ticket_id = save_ticket(ticket.text, ticket.source)
         result = classify_ticket(ticket.text)
         save_classification(ticket_id, result["category"], result["urgency_score"])
 
-    return get_all_tickets_with_classifications()
+    all_tickets = get_all_tickets_with_classifications()
+    return {"tickets": all_tickets, "skipped": skipped}
 
 
 @app.get("/tickets")
