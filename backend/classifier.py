@@ -46,6 +46,12 @@ def _get_client() -> anthropic.Anthropic:
     return _client
 
 
+def _fallback(reason: str) -> dict:
+    result = dict(FALLBACK_RESULT)
+    result["reason"] = reason
+    return result
+
+
 def classify_ticket(text: str) -> dict:
     try:
         client = _get_client()
@@ -72,19 +78,19 @@ def classify_ticket(text: str) -> dict:
 
     except anthropic.AuthenticationError:
         print("Classifier error: invalid or missing ANTHROPIC_API_KEY")
-        return dict(FALLBACK_RESULT)
+        return _fallback("API key invalid")
     except anthropic.RateLimitError:
         print("Classifier error: rate limited by Anthropic API")
-        return dict(FALLBACK_RESULT)
+        return _fallback("Rate limited — try again")
     except anthropic.APIStatusError as e:
         print(f"Classifier error: API status error ({e.status_code}): {e.message}")
-        return dict(FALLBACK_RESULT)
+        return _fallback("API error")
     except anthropic.APIConnectionError:
         print("Classifier error: network error connecting to Anthropic API")
-        return dict(FALLBACK_RESULT)
+        return _fallback("API error")
     except (StopIteration, json.JSONDecodeError, ValueError, KeyError) as e:
         print(f"Classifier error: malformed response ({e})")
-        return dict(FALLBACK_RESULT)
+        return _fallback("API error")
     except Exception as e:
         print(f"Classifier error: unexpected error ({e})")
-        return dict(FALLBACK_RESULT)
+        return _fallback("Unexpected error")

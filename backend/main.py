@@ -52,19 +52,29 @@ def create_tickets(tickets: list[TicketIn]):
         )
 
     skipped = []
+    failed = []
     for ticket in tickets:
         if len(ticket.text) > MAX_TEXT_LENGTH:
-            skipped.append({"text": ticket.text[:50] + "...", "reason": "text too long"})
+            skipped.append(
+                {
+                    "text": ticket.text,
+                    "reason": f"Text too long — max {MAX_TEXT_LENGTH} characters",
+                }
+            )
+            continue
+
+        result = classify_ticket(ticket.text)
+        if not result["classified"]:
+            failed.append({"text": ticket.text, "reason": result["reason"]})
             continue
 
         ticket_id = save_ticket(ticket.text, ticket.source)
-        result = classify_ticket(ticket.text)
         save_classification(
             ticket_id, result["category"], result["urgency_score"], result["classified"]
         )
 
     all_tickets = get_all_tickets_with_classifications()
-    return {"tickets": all_tickets, "skipped": skipped}
+    return {"tickets": all_tickets, "skipped": skipped, "failed": failed}
 
 
 @app.get("/tickets")
