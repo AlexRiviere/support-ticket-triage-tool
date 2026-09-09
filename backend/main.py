@@ -90,6 +90,11 @@ def reclassify_ticket(ticket_id: int):
     return {**ticket, **result}
 
 
+def sanitize_csv_value(value):
+    if isinstance(value, str) and value.startswith(("=", "+", "-", "@")):
+        return "'" + value
+    return value
+
 @app.get("/export")
 def export_csv():
     rows = get_all_tickets_with_classifications()
@@ -101,10 +106,10 @@ def export_csv():
         writer.writerow(
             [
                 row["id"],
-                row["text"],
+                sanitize_csv_value(row["text"]),
                 row.get("category"),
                 row.get("urgency_score"),
-                row["source"],
+                sanitize_csv_value(row["source"]),
                 row["created_at"],
             ]
         )
