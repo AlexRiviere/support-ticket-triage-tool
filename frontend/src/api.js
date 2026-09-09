@@ -14,7 +14,10 @@ export async function classifyTickets(payload) {
   })
   if (!res.ok) {
     const errorBody = await res.json().catch(() => null)
-    throw new Error(errorBody?.detail || 'Failed to classify tickets')
+    const detail = errorBody?.detail
+    const message =
+      typeof detail === 'string' ? detail : detail ? JSON.stringify(detail) : null
+    throw new Error(message || 'Failed to classify tickets')
   }
   return res.json()
 }
