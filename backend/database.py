@@ -82,26 +82,32 @@ def delete_ticket(ticket_id: int) -> bool:
         return cursor.rowcount > 0
 
 
-def get_all_tickets_with_classifications() -> list[dict]:
+_TICKETS_WITH_CLASSIFICATIONS_QUERY = """
+    SELECT
+        t.id AS id,
+        t.text AS text,
+        t.source AS source,
+        t.created_at AS created_at,
+        c.category AS category,
+        c.urgency_score AS urgency_score,
+        c.classified AS classified,
+        c.classified_at AS classified_at
+    FROM tickets t
+    LEFT JOIN classifications c ON c.ticket_id = t.id
+    ORDER BY c.urgency_score DESC, t.created_at DESC
+"""
+
+
+def iter_tickets_with_classifications():
+    """Yield ticket+classification rows one at a time, keeping the cursor open."""
     with get_connection() as conn:
-        rows = conn.execute(
-            """
-            SELECT
-                t.id AS id,
-                t.text AS text,
-                t.source AS source,
-                t.created_at AS created_at,
-                c.category AS category,
-                c.urgency_score AS urgency_score,
-                c.classified AS classified,
-                c.classified_at AS classified_at
-            FROM tickets t
-            LEFT JOIN classifications c ON c.ticket_id = t.id
-            ORDER BY c.urgency_score DESC, t.created_at DESC
-            """
-        ).fetchall()
-        results = [dict(row) for row in rows]
-        for row in results:
-            if row["classified"] is not None:
-                row["classified"] = bool(row["classified"])
-        return results
+        cursor = conn.execute(_TICKETS_WITH_CLASSIFICATIONS_QUERY)
+        for row in cursor:
+            row_dict = dict(row)
+            if row_dict["classified"] is not None:
+                row_dict["classified"] = bool(row_dict["classified"])
+            yield row_dict
+
+
+def get_all_tickets_with_classifications() -> list[dict]:
+    return list(iter_tickets_with_classifications())

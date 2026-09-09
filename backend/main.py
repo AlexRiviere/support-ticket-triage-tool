@@ -1,5 +1,4 @@
 import csv
-import io
 
 from dotenv import load_dotenv
 
@@ -16,6 +15,7 @@ from database import (
     get_all_tickets_with_classifications,
     get_ticket,
     init_db,
+    iter_tickets_with_classifications,
     save_classification,
     save_ticket,
 )
@@ -99,17 +99,21 @@ def sanitize_csv_value(value):
         return "'" + value
     return value
 
-@app.get("/export")
-def export_csv():
-    rows = get_all_tickets_with_classifications()
 
-    buffer = io.StringIO()
-    writer = csv.writer(buffer)
-    writer.writerow(
+class _CSVEcho:
+    """File-like object whose write() returns the string instead of buffering it."""
+
+    def write(self, value):
+        return value
+
+
+def _generate_csv_rows():
+    writer = csv.writer(_CSVEcho())
+    yield writer.writerow(
         ["id", "text", "category", "urgency_score", "classified", "source", "created_at"]
     )
-    for row in rows:
-        writer.writerow(
+    for row in iter_tickets_with_classifications():
+        yield writer.writerow(
             [
                 row["id"],
                 sanitize_csv_value(row["text"]),
@@ -121,9 +125,11 @@ def export_csv():
             ]
         )
 
-    buffer.seek(0)
+
+@app.get("/export")
+def export_csv():
     return StreamingResponse(
-        iter([buffer.getvalue()]),
+        _generate_csv_rows(),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=tickets_export.csv"},
     )
