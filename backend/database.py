@@ -93,7 +93,7 @@ def get_all_tickets_with_classifications() -> list[dict]:
                 c.classified_at AS classified_at
             FROM tickets t
             LEFT JOIN classifications c ON c.ticket_id = t.id
-            ORDER BY c.urgency_score DESC NULLS LAST, t.created_at DESC
+            ORDER BY c.urgency_score DESC, t.created_at DESC
             """
         ).fetchall()
         return [dict(row) for row in rows]
