@@ -27,8 +27,7 @@ OUTPUT_SCHEMA = {
             },
             "urgency_score": {
                 "type": "integer",
-                "minimum": 1,
-                "maximum": 10,
+                "enum": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
             },
         },
         "required": ["category", "urgency_score"],
