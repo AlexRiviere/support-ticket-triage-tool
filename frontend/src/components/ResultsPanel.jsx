@@ -3,7 +3,14 @@ import TicketCard from './TicketCard'
 
 const FILTERS = ['all', ...CATEGORIES]
 
-export default function ResultsPanel({ tickets, filter, onFilterChange, onExport, isExporting }) {
+export default function ResultsPanel({
+  tickets,
+  filter,
+  onFilterChange,
+  onExport,
+  isExporting,
+  onDeleteTicket,
+}) {
   const filteredTickets =
     filter === 'all' ? tickets : tickets.filter((ticket) => ticket.category === filter)
 
@@ -43,7 +50,7 @@ export default function ResultsPanel({ tickets, filter, onFilterChange, onExport
       ) : (
         <div className="space-y-3">
           {filteredTickets.map((ticket) => (
-            <TicketCard key={ticket.id} ticket={ticket} />
+            <TicketCard key={ticket.id} ticket={ticket} onDeleted={onDeleteTicket} />
           ))}
         </div>
       )}

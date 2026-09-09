@@ -18,12 +18,11 @@ function findTextColumn(fields, data) {
   )
 }
 
-export default function InputPanel({ onClassify }) {
+export default function InputPanel({ onClassify, source, onSourceChange }) {
   const [activeTab, setActiveTab] = useState('paste')
   const [pasteText, setPasteText] = useState('')
   const [csvRows, setCsvRows] = useState(null)
   const [csvFileName, setCsvFileName] = useState(null)
-  const [source, setSource] = useState('manual')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [localError, setLocalError] = useState(null)
   const fileInputRef = useRef(null)
@@ -142,7 +141,7 @@ export default function InputPanel({ onClassify }) {
         <select
           id="source"
           value={source}
-          onChange={(event) => setSource(event.target.value)}
+          onChange={(event) => onSourceChange(event.target.value)}
           className="rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none"
         >
           {SOURCES.map((option) => (

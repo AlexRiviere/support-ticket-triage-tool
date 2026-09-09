@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { deleteTicket } from '../api'
 import { CATEGORY_STYLES, urgencyStyles } from '../constants'
 
 function formatTimestamp(value) {
@@ -7,12 +9,35 @@ function formatTimestamp(value) {
   return date.toLocaleString()
 }
 
-export default function TicketCard({ ticket }) {
+export default function TicketCard({ ticket, onDeleted }) {
   const { text, source, created_at: createdAt, category, urgency_score: urgencyScore } = ticket
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState(null)
+
+  async function handleDelete() {
+    setIsDeleting(true)
+    setDeleteError(null)
+    try {
+      await deleteTicket(ticket.id)
+      onDeleted(ticket.id)
+    } catch (err) {
+      setDeleteError(err.message)
+      setIsDeleting(false)
+    }
+  }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <div className="mb-2 flex flex-wrap items-center gap-2">
+    <div className="relative rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+      <button
+        type="button"
+        onClick={handleDelete}
+        disabled={isDeleting}
+        aria-label="Delete ticket"
+        className="absolute right-3 top-3 rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        &times;
+      </button>
+      <div className="mb-2 flex flex-wrap items-center gap-2 pr-6">
         <span
           className={`rounded-full px-2 py-0.5 text-xs font-semibold ${urgencyStyles(urgencyScore)}`}
         >
@@ -34,6 +59,7 @@ export default function TicketCard({ ticket }) {
         <span>&middot;</span>
         <span>{formatTimestamp(createdAt)}</span>
       </div>
+      {deleteError && <p className="mt-2 text-xs text-red-600">{deleteError}</p>}
     </div>
   )
 }

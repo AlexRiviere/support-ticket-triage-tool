@@ -19,6 +19,15 @@ export async function classifyTickets(payload) {
   return res.json()
 }
 
+export async function deleteTicket(id) {
+  const res = await fetch(`${API_BASE_URL}/tickets/${id}`, { method: 'DELETE' })
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => null)
+    throw new Error(errorBody?.detail || 'Failed to delete ticket')
+  }
+  return res.json()
+}
+
 export async function exportCsv() {
   const res = await fetch(`${API_BASE_URL}/export`)
   if (!res.ok) throw new Error('Failed to export tickets')

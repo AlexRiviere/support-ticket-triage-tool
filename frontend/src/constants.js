@@ -9,6 +9,8 @@ export const CATEGORY_STYLES = {
 
 export const SOURCES = ['manual', 'email', 'chat', 'web']
 
+export const MAX_TEXT_LENGTH = 2000
+
 export function urgencyStyles(score) {
   if (score == null) return 'bg-gray-100 text-gray-500'
   if (score >= 8) return 'bg-red-100 text-red-800'

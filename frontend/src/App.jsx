@@ -1,14 +1,42 @@
 import { useEffect, useState } from 'react'
 import { classifyTickets, exportCsv, fetchTickets } from './api'
+import DraftsSection from './components/DraftsSection'
 import Header from './components/Header'
 import InputPanel from './components/InputPanel'
 import ResultsPanel from './components/ResultsPanel'
-import SkippedBanner from './components/SkippedBanner'
+
+function makeDraftId() {
+  return typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `draft-${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
+function draftsFromResponse(response) {
+  const skippedDrafts = (response.skipped || []).map((item) => ({
+    id: makeDraftId(),
+    text: item.text,
+    originalText: item.text,
+    kind: 'skipped',
+    reason: item.reason,
+    mode: 'edit',
+  }))
+  const failedDrafts = (response.failed || []).map((item) => ({
+    id: makeDraftId(),
+    text: item.text,
+    originalText: item.text,
+    kind: 'failed',
+    reason: item.reason,
+    mode: 'view',
+  }))
+  return [...skippedDrafts, ...failedDrafts]
+}
 
 export default function App() {
   const [tickets, setTickets] = useState([])
-  const [skipped, setSkipped] = useState([])
+  const [drafts, setDrafts] = useState([])
+  const [retryingIds, setRetryingIds] = useState(new Set())
   const [filter, setFilter] = useState('all')
+  const [source, setSource] = useState('manual')
   const [loadError, setLoadError] = useState(null)
   const [isExporting, setIsExporting] = useState(false)
 
@@ -29,7 +57,72 @@ export default function App() {
   async function handleClassify(ticketsPayload) {
     const response = await classifyTickets(ticketsPayload)
     setTickets(response.tickets)
-    setSkipped(response.skipped || [])
+    setDrafts((prev) => [...prev, ...draftsFromResponse(response)])
+  }
+
+  function handleEditDraft(id) {
+    setDrafts((prev) => prev.map((draft) => (draft.id === id ? { ...draft, mode: 'edit' } : draft)))
+  }
+
+  function handleCancelDraft(id) {
+    setDrafts((prev) =>
+      prev.map((draft) =>
+        draft.id === id ? { ...draft, text: draft.originalText, mode: 'view' } : draft,
+      ),
+    )
+  }
+
+  function handleDraftTextChange(id, text) {
+    setDrafts((prev) => prev.map((draft) => (draft.id === id ? { ...draft, text } : draft)))
+  }
+
+  async function handleRetryDraft(draft) {
+    setRetryingIds((prev) => new Set(prev).add(draft.id))
+    try {
+      const response = await classifyTickets([{ text: draft.text, source }])
+      setTickets(response.tickets)
+
+      const failedItem = response.failed?.[0]
+      const skippedItem = response.skipped?.[0]
+
+      if (!failedItem && !skippedItem) {
+        setDrafts((prev) => prev.filter((item) => item.id !== draft.id))
+        return
+      }
+
+      const outcome = failedItem || skippedItem
+      const kind = failedItem ? 'failed' : 'skipped'
+      setDrafts((prev) =>
+        prev.map((item) =>
+          item.id === draft.id
+            ? {
+                ...item,
+                text: outcome.text,
+                originalText: outcome.text,
+                reason: outcome.reason,
+                kind,
+                mode: kind === 'skipped' ? 'edit' : 'view',
+              }
+            : item,
+        ),
+      )
+    } catch (err) {
+      setDrafts((prev) =>
+        prev.map((item) =>
+          item.id === draft.id ? { ...item, reason: err.message, kind: 'failed', mode: 'view' } : item,
+        ),
+      )
+    } finally {
+      setRetryingIds((prev) => {
+        const next = new Set(prev)
+        next.delete(draft.id)
+        return next
+      })
+    }
+  }
+
+  function handleDeleteTicket(id) {
+    setTickets((prev) => prev.filter((ticket) => ticket.id !== id))
   }
 
   async function handleExport() {
@@ -52,15 +145,25 @@ export default function App() {
             {loadError}
           </div>
         )}
-        <SkippedBanner skipped={skipped} onDismiss={() => setSkipped([])} />
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[380px_1fr]">
-          <InputPanel onClassify={handleClassify} />
+          <div>
+            <InputPanel onClassify={handleClassify} source={source} onSourceChange={setSource} />
+            <DraftsSection
+              drafts={drafts}
+              retryingIds={retryingIds}
+              onEdit={handleEditDraft}
+              onCancel={handleCancelDraft}
+              onTextChange={handleDraftTextChange}
+              onRetry={handleRetryDraft}
+            />
+          </div>
           <ResultsPanel
             tickets={tickets}
             filter={filter}
             onFilterChange={setFilter}
             onExport={handleExport}
             isExporting={isExporting}
+            onDeleteTicket={handleDeleteTicket}
           />
         </div>
       </main>
