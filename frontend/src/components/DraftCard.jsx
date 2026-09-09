@@ -23,6 +23,7 @@ export default function DraftCard({ draft, isRetrying, onEdit, onCancel, onTextC
           </p>
         )}
         <textarea
+          aria-label="Ticket text"
           value={draft.text}
           onChange={(event) => onTextChange(event.target.value)}
           rows={3}
