@@ -36,6 +36,7 @@ def init_db():
                 ticket_id INTEGER NOT NULL,
                 category TEXT NOT NULL,
                 urgency_score INTEGER NOT NULL,
+                classified INTEGER NOT NULL DEFAULT 1,
                 classified_at TEXT NOT NULL,
                 FOREIGN KEY (ticket_id) REFERENCES tickets (id) ON DELETE CASCADE
             )
@@ -53,13 +54,15 @@ def save_ticket(text: str, source: str) -> int:
         return cursor.lastrowid
 
 
-def save_classification(ticket_id: int, category: str, urgency_score: int) -> int:
+def save_classification(
+    ticket_id: int, category: str, urgency_score: int, classified: bool = True
+) -> int:
     classified_at = datetime.now(timezone.utc).isoformat()
     with get_connection() as conn:
         conn.execute("DELETE FROM classifications WHERE ticket_id = ?", (ticket_id,))
         cursor = conn.execute(
-            "INSERT INTO classifications (ticket_id, category, urgency_score, classified_at) VALUES (?, ?, ?, ?)",
-            (ticket_id, category, urgency_score, classified_at),
+            "INSERT INTO classifications (ticket_id, category, urgency_score, classified, classified_at) VALUES (?, ?, ?, ?, ?)",
+            (ticket_id, category, urgency_score, classified, classified_at),
         )
         return cursor.lastrowid
 
@@ -90,10 +93,15 @@ def get_all_tickets_with_classifications() -> list[dict]:
                 t.created_at AS created_at,
                 c.category AS category,
                 c.urgency_score AS urgency_score,
+                c.classified AS classified,
                 c.classified_at AS classified_at
             FROM tickets t
             LEFT JOIN classifications c ON c.ticket_id = t.id
             ORDER BY c.urgency_score DESC, t.created_at DESC
             """
         ).fetchall()
-        return [dict(row) for row in rows]
+        results = [dict(row) for row in rows]
+        for row in results:
+            if row["classified"] is not None:
+                row["classified"] = bool(row["classified"])
+        return results

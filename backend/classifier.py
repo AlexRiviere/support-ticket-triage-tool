@@ -7,7 +7,7 @@ MODEL = "claude-haiku-4-5"
 
 VALID_CATEGORIES = {"billing", "technical", "account", "general"}
 
-FALLBACK_RESULT = {"category": "general", "urgency_score": 5}
+FALLBACK_RESULT = {"category": "general", "urgency_score": 5, "classified": False}
 
 SYSTEM_PROMPT = (
     "You are a support ticket triage assistant. Read the ticket text and classify it. "
@@ -68,7 +68,7 @@ def classify_ticket(text: str) -> dict:
         if not isinstance(urgency_score, int) or not (1 <= urgency_score <= 10):
             raise ValueError(f"Invalid urgency_score returned: {urgency_score}")
 
-        return {"category": category, "urgency_score": urgency_score}
+        return {"category": category, "urgency_score": urgency_score, "classified": True}
 
     except anthropic.AuthenticationError:
         print("Classifier error: invalid or missing ANTHROPIC_API_KEY")

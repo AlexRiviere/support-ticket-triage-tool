@@ -59,7 +59,9 @@ def create_tickets(tickets: list[TicketIn]):
 
         ticket_id = save_ticket(ticket.text, ticket.source)
         result = classify_ticket(ticket.text)
-        save_classification(ticket_id, result["category"], result["urgency_score"])
+        save_classification(
+            ticket_id, result["category"], result["urgency_score"], result["classified"]
+        )
 
     all_tickets = get_all_tickets_with_classifications()
     return {"tickets": all_tickets, "skipped": skipped}
@@ -85,7 +87,9 @@ def reclassify_ticket(ticket_id: int):
         raise HTTPException(status_code=404, detail="Ticket not found")
 
     result = classify_ticket(ticket["text"])
-    save_classification(ticket_id, result["category"], result["urgency_score"])
+    save_classification(
+        ticket_id, result["category"], result["urgency_score"], result["classified"]
+    )
 
     return {**ticket, **result}
 
@@ -101,7 +105,9 @@ def export_csv():
 
     buffer = io.StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(["id", "text", "category", "urgency_score", "source", "created_at"])
+    writer.writerow(
+        ["id", "text", "category", "urgency_score", "classified", "source", "created_at"]
+    )
     for row in rows:
         writer.writerow(
             [
@@ -109,6 +115,7 @@ def export_csv():
                 sanitize_csv_value(row["text"]),
                 row.get("category"),
                 row.get("urgency_score"),
+                row.get("classified"),
                 sanitize_csv_value(row["source"]),
                 row["created_at"],
             ]
