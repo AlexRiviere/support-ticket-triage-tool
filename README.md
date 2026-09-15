@@ -62,5 +62,5 @@ Open **http://localhost:3000**.
 
 ## Notes
 
-- Batches are capped at 100 tickets and 2000 characters per ticket (`backend/main.py`). And this is adjustable as a constant. 
+- Batches are capped at 100 tickets and 2000 characters per ticket. Both limits are adjustable constants in `backend/main.py` (`MAX_TICKETS_PER_BATCH` and `MAX_TEXT_LENGTH`).
 - If the Anthropic API call fails for any reason (bad key, rate limit, etc.), the ticket is not saved and appears in the `failed` bucket instead of being silently misclassified.
